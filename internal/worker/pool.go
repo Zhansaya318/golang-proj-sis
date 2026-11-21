@@ -46,8 +46,6 @@ func NewPool(workers, queueSize int, handler Handler) (*Pool, error) {
 	return p, nil
 }
 
-// work keeps taking IDs until the queue is closed and empty,
-// so tasks accepted before Stop are still processed.
 func (p *Pool) work() {
 	defer p.wg.Done()
 	for id := range p.queue {

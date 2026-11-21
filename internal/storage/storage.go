@@ -24,10 +24,6 @@ type Store interface {
 	Fail(id int, reason error) error
 }
 
-// MemoryStore can be used by many goroutines at the same time.
-// mu protects the map, nextID and the fields of every stored task.
-// Tasks are changed only inside MemoryStore methods while mu is held,
-// and Get returns a copy, so nobody touches a stored task without the lock.
 type MemoryStore struct {
 	mu     sync.RWMutex
 	tasks  map[int]*task.Task
@@ -41,7 +37,6 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
-// Add keeps the pointer, so the caller should not change t after Add.
 func (s *MemoryStore) Add(t *task.Task) (int, error) {
 	if t == nil {
 		return 0, ErrNilTask
@@ -67,9 +62,6 @@ func (s *MemoryStore) Get(id int) (*task.Task, error) {
 	return t.Clone(), nil
 }
 
-// The methods below check the current state and change it while holding
-// the write lock, so two goroutines can never both make the same transition.
-
 func (s *MemoryStore) Enqueue(id int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,8 +84,6 @@ func (s *MemoryStore) ReturnToPending(id int) error {
 	return t.ReturnToPending()
 }
 
-// Start moves the task to processing and returns a copy of its transactions,
-// so the analysis can run after the lock is released.
 func (s *MemoryStore) Start(id int) ([]expense.Transaction, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -133,7 +123,6 @@ func (s *MemoryStore) Fail(id int, reason error) error {
 	return t.Fail(reason)
 }
 
-// find must be called with mu held.
 func (s *MemoryStore) find(id int) (*task.Task, error) {
 	t, ok := s.tasks[id]
 	if !ok {

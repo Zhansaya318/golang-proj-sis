@@ -226,7 +226,6 @@ func TestConcurrentAddGivesUniqueIDs(t *testing.T) {
 	}
 }
 
-// Only one of many goroutines may start the same task.
 func TestConcurrentStartIsAtomic(t *testing.T) {
 	s := NewMemoryStore()
 	id, err := s.Add(newTask())

@@ -20,8 +20,6 @@ const (
 	StatusFailed     Status = "failed"
 )
 
-// queued -> pending is used only when the queue rejects a submitted task.
-// pending -> processing is the synchronous Process path from checkpoint 1.
 var allowedTransitions = map[Status][]Status{
 	StatusPending:    {StatusQueued, StatusProcessing},
 	StatusQueued:     {StatusProcessing, StatusPending},
@@ -55,8 +53,6 @@ func New(txs []expense.Transaction) *Task {
 	}
 }
 
-// Clone returns a deep copy, so the caller can read it while
-// workers keep changing the original.
 func (t *Task) Clone() *Task {
 	c := *t
 	c.Transactions = make([]expense.Transaction, len(t.Transactions))

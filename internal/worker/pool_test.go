@@ -158,8 +158,6 @@ func TestPoolRunsTasksConcurrently(t *testing.T) {
 	mustSubmit(t, p, 1)
 	mustSubmit(t, p, 2)
 
-	// Both handlers have started and neither has finished,
-	// so the two tasks are processed at the same time.
 	a := h.waitStarted(t)
 	b := h.waitStarted(t)
 	if a == b {
@@ -197,7 +195,7 @@ func TestSubmitWhenQueueIsFull(t *testing.T) {
 	p := newPool(t, 1, 1, h)
 
 	mustSubmit(t, p, 1)
-	h.waitStarted(t) // the only worker is busy now
+	h.waitStarted(t)
 	mustSubmit(t, p, 2)
 
 	if err := p.Submit(3); !errors.Is(err, ErrQueueFull) {
@@ -241,8 +239,6 @@ func TestStopFinishesAcceptedTasks(t *testing.T) {
 	}
 }
 
-// Submit and Stop running at the same time must not panic,
-// and every accepted ID must still be handled.
 func TestConcurrentSubmitAndStop(t *testing.T) {
 	h := newCountingHandler()
 	p := newPool(t, 2, 5, h)

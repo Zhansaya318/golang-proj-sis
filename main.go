@@ -58,7 +58,6 @@ func main() {
 	err = svc.Submit(42)
 	fmt.Println("Missing task:       ", err, "| is ErrTaskNotFound:", errors.Is(err, storage.ErrTaskNotFound))
 
-	// Shutdown waits until all submitted tasks are processed.
 	svc.Shutdown()
 	fmt.Println("\nWorkers stopped")
 

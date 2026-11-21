@@ -268,8 +268,8 @@ func TestSubmitWhenQueueIsFull(t *testing.T) {
 	c := mustCreate(t, svc, sampleInput)
 
 	mustSubmit(t, svc, a.ID)
-	an.waitStarted(t, 1)     // worker is busy with A
-	mustSubmit(t, svc, b.ID) // B takes the only place in the queue
+	an.waitStarted(t, 1)
+	mustSubmit(t, svc, b.ID)
 
 	if err := svc.Submit(c.ID); !errors.Is(err, worker.ErrQueueFull) {
 		t.Fatalf("expected ErrQueueFull, got %v", err)
