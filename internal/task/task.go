@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"maps"
 
 	"expense-analyzer/internal/expense"
 )
@@ -13,15 +14,17 @@ type Status string
 
 const (
 	StatusPending    Status = "pending"
+	StatusQueued     Status = "queued"
 	StatusProcessing Status = "processing"
 	StatusCompleted  Status = "completed"
 	StatusFailed     Status = "failed"
 )
 
-// allowedTransitions lists every state a task may move to from a given state.
-// Completed and Failed are final: they have no outgoing transitions.
+// queued -> pending is used only when the queue rejects a submitted task.
+// pending -> processing is the synchronous Process path from checkpoint 1.
 var allowedTransitions = map[Status][]Status{
-	StatusPending:    {StatusProcessing},
+	StatusPending:    {StatusQueued, StatusProcessing},
+	StatusQueued:     {StatusProcessing, StatusPending},
 	StatusProcessing: {StatusCompleted, StatusFailed},
 }
 
@@ -39,7 +42,7 @@ type Task struct {
 	Transactions []expense.Transaction
 	Status       Status
 	Result       *expense.Result
-	Err          string // reason of failure, set only when Status is StatusFailed
+	Err          string
 }
 
 func New(txs []expense.Transaction) *Task {
@@ -50,6 +53,28 @@ func New(txs []expense.Transaction) *Task {
 		Transactions: input,
 		Status:       StatusPending,
 	}
+}
+
+// Clone returns a deep copy, so the caller can read it while
+// workers keep changing the original.
+func (t *Task) Clone() *Task {
+	c := *t
+	c.Transactions = make([]expense.Transaction, len(t.Transactions))
+	copy(c.Transactions, t.Transactions)
+	if t.Result != nil {
+		res := *t.Result
+		res.ByCategory = maps.Clone(t.Result.ByCategory)
+		c.Result = &res
+	}
+	return &c
+}
+
+func (t *Task) Enqueue() error {
+	return t.transitionTo(StatusQueued)
+}
+
+func (t *Task) ReturnToPending() error {
+	return t.transitionTo(StatusPending)
 }
 
 func (t *Task) Start() error {
@@ -64,8 +89,6 @@ func (t *Task) Complete(res expense.Result) error {
 	return nil
 }
 
-// Fail moves a task that is being processed into the final failed state
-// and records why processing failed.
 func (t *Task) Fail(reason error) error {
 	if err := t.transitionTo(StatusFailed); err != nil {
 		return err

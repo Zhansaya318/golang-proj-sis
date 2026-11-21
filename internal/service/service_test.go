@@ -19,9 +19,6 @@ var sampleInput = []expense.Transaction{
 	{Category: "food", Amount: 3000},
 }
 
-// Helpers stop the test with a clear message instead of a nil pointer panic
-// when a setup step unexpectedly fails.
-
 func mustCreate(t *testing.T, svc *Service, txs []expense.Transaction) *task.Task {
 	t.Helper()
 	tk, err := svc.Create(txs)
@@ -159,7 +156,6 @@ func TestProcessTwiceFails(t *testing.T) {
 	svc := newService()
 	created := mustCreate(t, svc, sampleInput)
 	first := mustProcess(t, svc, created.ID)
-	firstResult := first.Result
 
 	_, err := svc.Process(created.ID)
 	if !errors.Is(err, task.ErrInvalidTransition) {
@@ -170,7 +166,7 @@ func TestProcessTwiceFails(t *testing.T) {
 	if tk.Status != task.StatusCompleted {
 		t.Errorf("Status = %s, want completed", tk.Status)
 	}
-	if tk.Result != firstResult {
+	if tk.Result == nil || tk.Result.Total != first.Result.Total {
 		t.Error("result must not be replaced by a failed second run")
 	}
 }
@@ -179,8 +175,7 @@ func TestProcessFailedAnalysisMarksTaskFailed(t *testing.T) {
 	svc := newService()
 	created := mustCreate(t, svc, sampleInput)
 
-	// Corrupt the stored input after creation so that the analysis fails.
-	created.Transactions[0].Amount = -1
+	svc.analyzer = failingAnalyzer{}
 
 	tk, err := svc.Process(created.ID)
 	if !errors.Is(err, expense.ErrInvalidAmount) {
